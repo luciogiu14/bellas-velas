@@ -1,3 +1,4 @@
 streamlit
 pandas
 streamlit-keyup
+st-gsheets-connection
