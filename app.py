@@ -58,37 +58,25 @@ import time
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-def leer_hoja_con_reintento(worksheet_name, intentos=3):
-    """Lee una pestaña de Google Sheets con reintento si la API está saturada."""
+def leer_hoja(worksheet_name, intentos=3):
+    """Lee una pestaña con reintento si la API de Google está saturada."""
     for i in range(intentos):
         try:
             df = conn.read(worksheet=worksheet_name, ttl="10m")
             if df is not None and not df.empty:
                 return df.dropna(how="all")
             return pd.DataFrame()
-        except Exception as e:
+        except Exception:
             if i < intentos - 1:
-                time.sleep(2)  # Pausa breve si Google pide esperar
+                time.sleep(2)
             else:
-                st.warning(f"Google Sheets está momentáneamente ocupado ({worksheet_name}). Reintentando...")
                 return pd.DataFrame()
     return pd.DataFrame()
 
 def escribir_hoja(worksheet_name, df):
     conn.update(worksheet=worksheet_name, data=df)
-    # Invalidar caché local para que tome los cambios frescos
-    if f"df_{worksheet_name}" in st.session_state:
-        del st.session_state[f"df_{worksheet_name}"]
-
-# Carga persistente en session_state para no saturar la cuota de Google
-if "df_productos" not in st.session_state or st.session_state.df_productos.empty:
-    st.session_state.df_productos = leer_hoja_con_reintento("productos")
-
-if "df_insumos" not in st.session_state or st.session_state.df_insumos.empty:
-    st.session_state.df_insumos = leer_hoja_con_reintento("insumos")
-
-df_productos = st.session_state.df_productos.copy()
-df_insumos = st.session_state.df_insumos.copy()
+    # Refrescar la copia en memoria de la sesión
+    st.session_state[f"df_{worksheet_name}"] = df.copy()
 
 # Inicializar estados de la sesión
 if "carrito" not in st.session_state:
@@ -104,9 +92,15 @@ if "item_selector_key" not in st.session_state:
 
 st.title("🕯️ Bellas Velas - Control de Stock y Ventas")
 
-# Carga de tablas base
-df_productos = leer_hoja("productos")
-df_insumos = leer_hoja("insumos")
+# Carga en session_state para no gastar cuota de lecturas por minuto
+if "df_productos" not in st.session_state or st.session_state.df_productos.empty:
+    st.session_state.df_productos = leer_hoja("productos")
+
+if "df_insumos" not in st.session_state or st.session_state.df_insumos.empty:
+    st.session_state.df_insumos = leer_hoja("insumos")
+
+df_productos = st.session_state.df_productos
+df_insumos = st.session_state.df_insumos
 
 # Asegurar tipos numéricos en productos
 cols_num_prod = ["gramos_cera", "costo_recipiente_o_molde", "costo_fabricacion", "precio_venta_sugerido", "precio_venta_actual", "stock_minimo_alerta", "stock_actual"]
