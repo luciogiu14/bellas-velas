@@ -54,18 +54,41 @@ with st.sidebar:
 # =========================================================
 # CONEXIÓN CON GOOGLE SHEETS
 # =========================================================
+import time
+
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=300)
-def leer_hoja(worksheet_name):
-    df = conn.read(worksheet=worksheet_name, ttl="5m")
-    if df is None or df.empty:
-        return pd.DataFrame()
-    return df.dropna(how="all")
+def leer_hoja_con_reintento(worksheet_name, intentos=3):
+    """Lee una pestaña de Google Sheets con reintento si la API está saturada."""
+    for i in range(intentos):
+        try:
+            df = conn.read(worksheet=worksheet_name, ttl="10m")
+            if df is not None and not df.empty:
+                return df.dropna(how="all")
+            return pd.DataFrame()
+        except Exception as e:
+            if i < intentos - 1:
+                time.sleep(2)  # Pausa breve si Google pide esperar
+            else:
+                st.warning(f"Google Sheets está momentáneamente ocupado ({worksheet_name}). Reintentando...")
+                return pd.DataFrame()
+    return pd.DataFrame()
 
 def escribir_hoja(worksheet_name, df):
     conn.update(worksheet=worksheet_name, data=df)
-    st.cache_data.clear()  # Limpia la caché al guardar para refrescar datos nuevos
+    # Invalidar caché local para que tome los cambios frescos
+    if f"df_{worksheet_name}" in st.session_state:
+        del st.session_state[f"df_{worksheet_name}"]
+
+# Carga persistente en session_state para no saturar la cuota de Google
+if "df_productos" not in st.session_state or st.session_state.df_productos.empty:
+    st.session_state.df_productos = leer_hoja_con_reintento("productos")
+
+if "df_insumos" not in st.session_state or st.session_state.df_insumos.empty:
+    st.session_state.df_insumos = leer_hoja_con_reintento("insumos")
+
+df_productos = st.session_state.df_productos.copy()
+df_insumos = st.session_state.df_insumos.copy()
 
 # Inicializar estados de la sesión
 if "carrito" not in st.session_state:
