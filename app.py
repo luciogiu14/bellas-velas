@@ -16,7 +16,7 @@ st.set_page_config(page_title="Bellas Velas - Gestión", page_icon="🕯️", la
 # =========================================================
 # CONTROL DE ACCESO / CONTRASEÑA
 # =========================================================
-CLAVE_CORRECTA = "bellasvelas"
+CLAVE_CORRECTA = "marie2026"
 
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
