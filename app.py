@@ -467,8 +467,8 @@ with tab_ventas:
         
         c_p1, c_p2, c_p3 = st.columns([4, 4, 3])
         with c_p1:
-            st.caption(f"Cera ({gramos_refill:,.0f}g × ${cera_bpf_end:.2f}): **${costo_cera:,.1f}** \vert{} Armado: **${costo_fijo_armado:,.0f}**")
-            st.info(f"Costo elaboración: **${costo_total_refill:,.0f}** \vert{} Sugerido: **${precio_refill_sugerido:,.0f}**")
+            st.caption(f"Cera ({gramos_refill:,.0f}g × ${cera_bpf_end:.2f}): **${costo_cera:,.1f}** | Armado: **${costo_fijo_armado:,.0f}**")
+            st.info(f"Costo elaboración: **${costo_total_refill:,.0f}** | Sugerido: **${precio_refill_sugerido:,.0f}**")
         with c_p2:
             precio_final_refill = st.number_input("Precio a cobrar ($):", min_value=0.0, value=float(precio_refill_sugerido), step=100.0)
         with c_p3:
