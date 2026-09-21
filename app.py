@@ -56,18 +56,16 @@ with st.sidebar:
 # =========================================================
 conn = st.connection("gsheets", type=GSheetsConnection)
 
+@st.cache_data(ttl=300)
 def leer_hoja(worksheet_name):
-    try:
-        df = conn.read(worksheet=worksheet_name, ttl=0)
-        if df is None or df.empty:
-            return pd.DataFrame()
-        return df.dropna(how="all")
-    except Exception as e:
-        st.error(f"Error al leer la hoja '{worksheet_name}': {e}")
+    df = conn.read(worksheet=worksheet_name, ttl="5m")
+    if df is None or df.empty:
         return pd.DataFrame()
-        
+    return df.dropna(how="all")
+
 def escribir_hoja(worksheet_name, df):
     conn.update(worksheet=worksheet_name, data=df)
+    st.cache_data.clear()  # Limpia la caché al guardar para refrescar datos nuevos
 
 # Inicializar estados de la sesión
 if "carrito" not in st.session_state:
