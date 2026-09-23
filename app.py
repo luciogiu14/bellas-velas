@@ -75,8 +75,13 @@ def leer_hoja(worksheet_name, intentos=3):
 
 def escribir_hoja(worksheet_name, df):
     conn.update(worksheet=worksheet_name, data=df)
-    # Refrescar la copia en memoria de la sesión
+    # Guardamos la copia fresca en la memoria de la app
     st.session_state[f"df_{worksheet_name}"] = df.copy()
+    # Limpiamos caché para que la próxima lectura obligue a traer lo último
+    try:
+        st.cache_data.clear()
+    except Exception:
+        pass
 
 # Inicializar estados de la sesión
 if "carrito" not in st.session_state:
