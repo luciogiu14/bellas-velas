@@ -604,30 +604,45 @@ with tab_ventas:
 with tab_historial:
     st.subheader("Registro Histórico de Ventas")
     
-    # Si tenemos las ventas en memoria fresca las usamos, sino las leemos
+    # 1. Obtener datos de ventas (desde memoria o desde la hoja)
     if "df_ventas" in st.session_state and not st.session_state.df_ventas.empty:
-        df_ventas = st.session_state.df_ventas
+        df_hist = st.session_state.df_ventas.copy()
     else:
-        df_ventas = leer_hoja("ventas")
-        st.session_state.df_ventas = df_ventas
-        
-        # Unir con nombres de productos
-        prod_map = dict(zip(df_productos["id_producto"].astype(str), df_productos["nombre"]))
+        df_hist = leer_hoja("ventas")
+        st.session_state.df_ventas = df_hist.copy()
+
+    # 2. Verificar que no esté vacía
+    if df_hist.empty or "id_venta" not in df_hist.columns:
+        st.info("Todavía no se registraron ventas en la planilla.")
+    else:
+        # Asegurar columnas obligatorias si vinieran vacías
+        cols_esperadas = ["id_venta", "nro_ticket", "fecha", "cliente", "id_producto", "cantidad", "precio_unitario", "total_venta"]
+        for col in cols_esperadas:
+            if col not in df_hist.columns:
+                df_hist[col] = ""
+
+        # Mapear nombres de productos para mostrar la descripción en vez del código
+        prod_map = {}
+        if not df_productos.empty and "id_producto" in df_productos.columns and "nombre" in df_productos.columns:
+            prod_map = dict(zip(df_productos["id_producto"].astype(str), df_productos["nombre"]))
         prod_map["REFILL"] = "Servicio de Refill"
-        
-        df_v_display["Producto"] = df_v_display["id_producto"].astype(str).map(prod_map).fillna(df_v_display["id_producto"])
-        
-        df_v_display = df_v_display.sort_values(by="id_venta", ascending=False)
-        
+
+        df_hist["Producto"] = df_hist["id_producto"].astype(str).map(prod_map).fillna(df_hist["id_producto"])
+
+        # Ordenar de más reciente a más antigua
+        df_hist["id_venta_num"] = pd.to_numeric(df_hist["id_venta"], errors="coerce").fillna(0)
+        df_hist = df_hist.sort_values(by="id_venta_num", ascending=False)
+
+        # Armar la tabla limpia para mostrar
         columnas_finales = pd.DataFrame()
-        columnas_finales["N° Ticket"] = df_v_display["nro_ticket"]
-        columnas_finales["Fecha"] = df_v_display["fecha"]
-        columnas_finales["Cliente"] = df_v_display["cliente"]
-        columnas_finales["Producto"] = df_v_display["Producto"]
-        columnas_finales["Cantidad"] = df_v_display["cantidad"].astype(int)
-        columnas_finales["Precio Unitario"] = pd.to_numeric(df_v_display["precio_unitario"], errors="coerce").apply(lambda x: f"${x:,.0f}")
-        columnas_finales["Subtotal ($)"] = pd.to_numeric(df_v_display["total_venta"], errors="coerce").apply(lambda x: f"${x:,.0f}")
-        
+        columnas_finales["N° Ticket"] = df_hist["nro_ticket"]
+        columnas_finales["Fecha"] = df_hist["fecha"]
+        columnas_finales["Cliente"] = df_hist["cliente"]
+        columnas_finales["Producto"] = df_hist["Producto"]
+        columnas_finales["Cantidad"] = pd.to_numeric(df_hist["cantidad"], errors="coerce").fillna(0).astype(int)
+        columnas_finales["Precio Unitario"] = pd.to_numeric(df_hist["precio_unitario"], errors="coerce").fillna(0).apply(lambda x: f"${x:,.0f}")
+        columnas_finales["Subtotal ($)"] = pd.to_numeric(df_hist["total_venta"], errors="coerce").fillna(0).apply(lambda x: f"${x:,.0f}")
+
         st.dataframe(columnas_finales, use_container_width=True, hide_index=True)
 
 # =========================================================
