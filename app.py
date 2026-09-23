@@ -603,12 +603,13 @@ with tab_ventas:
 # =========================================================
 with tab_historial:
     st.subheader("Registro Histórico de Ventas")
-    df_ventas = leer_hoja("ventas")
     
-    if df_ventas.empty:
-        st.info("Todavía no se registraron ventas en la planilla.")
+    # Si tenemos las ventas en memoria fresca las usamos, sino las leemos
+    if "df_ventas" in st.session_state and not st.session_state.df_ventas.empty:
+        df_ventas = st.session_state.df_ventas
     else:
-        df_v_display = df_ventas.copy()
+        df_ventas = leer_hoja("ventas")
+        st.session_state.df_ventas = df_ventas
         
         # Unir con nombres de productos
         prod_map = dict(zip(df_productos["id_producto"].astype(str), df_productos["nombre"]))
